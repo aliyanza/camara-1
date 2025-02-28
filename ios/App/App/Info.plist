@@ -45,17 +45,8 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
-	
-	<!-- Permiso para acceder a la cámara del dispositivo -->
-<key>NSCameraUsageDescription</key>
-<string>Se necesita acceso a la cámara para tomar fotos</string>
-
-<!-- Permiso para guardar fotos en la galería -->
-<key>NSPhotoLibraryAddUsageDescription</key>
-<string>Se necesita acceso para guardar las fotos capturadas en tu galería</string>
-
-<!-- Permiso para acceder a las fotos existentes -->
-<key>NSPhotoLibraryUsageDescription</key>
-<string>Se necesita acceso a tu galería para mostrar las fotos guardadas</string>
+	<!-- Agrega el permiso de cámara aquí -->
+	<key>NSCameraUsageDescription</key>
+	<string>Se necesita acceso a la cámara para tomar fotos</string>
 </dict>
 </plist>
