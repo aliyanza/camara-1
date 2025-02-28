@@ -1,4 +1,4 @@
-import { NgIf, NgFor } from '@angular/common';
+import { NgIf, NgFor, DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { CameraService } from '../../services/camera.service';
 
@@ -10,7 +10,7 @@ interface PhotoItem {
 @Component({
   selector: 'app-camera',
   standalone: true,
-  imports: [NgIf, NgFor],
+  imports: [NgIf, NgFor, DatePipe],
   templateUrl: './camera.component.html',
   styleUrl: './camera.component.css'
 })
