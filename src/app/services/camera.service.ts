@@ -1,54 +1,124 @@
 import { Injectable } from '@angular/core';
-import { Camera, CameraResultType, CameraSource, PermissionStatus } from '@capacitor/camera';
+import { Capacitor } from '@capacitor/core';
+import { Camera, CameraResultType, CameraSource, CameraPermissionState } from '@capacitor/camera';
+import { Platform } from '@ionic/angular';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CameraService {
+  constructor(private platform: Platform) {}
 
-  constructor() { }
+  private async checkAndRequestPermissions(): Promise<boolean> {
+    // Si estamos en web, usamos una estrategia diferente
+    if (Capacitor.getPlatform() === 'web') {
+      return this.handleWebPermissions();
+    }
 
-  private async checkPermissions(): Promise<void> {
-    // En web, las comprobaciones de permisos funcionan de manera diferente
     try {
       const permissions = await Camera.checkPermissions();
-      
-      // Si estamos en web, podemos omitir algunas comprobaciones de permisos
-      // ya que el navegador manejará esto a través de su propio sistema de permisos
-      if (permissions.camera === 'prompt') {
-        await Camera.requestPermissions();
+      let permissionStatus = permissions.camera;
+
+      // Si no está concedido, intentamos solicitar permisos
+      if (permissionStatus !== 'granted') {
+        const requestResult = await Camera.requestPermissions();
+        permissionStatus = requestResult.camera;
+      }
+
+      return permissionStatus === 'granted';
+    } catch (error) {
+      console.error('Error verificando permisos:', error);
+      return false;
+    }
+  }
+
+  private async handleWebPermissions(): Promise<boolean> {
+    // En web, usamos la API de permisos del navegador
+    try {
+      if ('mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices) {
+        await navigator.mediaDevices.getUserMedia({ video: true });
+        return true;
+      } else {
+        console.warn('getUserMedia no está soportado en este navegador');
+        return false;
       }
     } catch (error) {
-      console.log('Verificación de permisos omitida en web:', error);
-      // No lanzamos error aquí, permitimos que el flujo continúe
+      console.error('Error en permisos de web:', error);
+      return false;
     }
   }
 
   async takePicture(): Promise<string> {
     try {
-      // Intentamos verificar permisos, pero no bloqueamos si falla
-      await this.checkPermissions();
-      
+      // Verificar si el plugin de cámara está disponible
+      if (!Capacitor.isPluginAvailable('Camera')) {
+        // Estrategia de fallback para web
+        if (Capacitor.getPlatform() === 'web') {
+          return this.handleWebImageCapture();
+        }
+        
+        throw new Error('Plugin de cámara no disponible');
+      }
+
+      // Verificar y solicitar permisos
+      const hasPermission = await this.checkAndRequestPermissions();
+      if (!hasPermission) {
+        throw new Error('Permisos de cámara denegados');
+      }
+
+      // Configuración para diferentes plataformas
+      const sourceType = this.platform.is('android') || this.platform.is('ios') 
+        ? CameraSource.Camera 
+        : CameraSource.Prompt;
+
+      // Capturar imagen
       const image = await Camera.getPhoto({
         quality: 90,
         allowEditing: false,
-        // Cambiamos a DataUrl para mejor compatibilidad web
         resultType: CameraResultType.DataUrl,
-        // Cambiamos a Camera para usar la cámara directamente en lugar de la galería
-        source: CameraSource.Camera,
-        // Añadimos opciones específicas para web
+        source: sourceType,
+        saveToGallery: true,
         webUseInput: true
       });
 
-      // Si usamos DataUrl, debemos acceder a dataUrl en lugar de webPath
+      // Verificar que tengamos un resultado válido
       if (image.dataUrl) {
         return image.dataUrl;
       } else {
-        throw new Error("No se obtuvo una imagen válida");
+        throw new Error('No se obtuvo una imagen válida');
       }
     } catch (error) {
-      console.error('Error en el servicio de cámara:', error);
+      console.error('Error completo en takePicture:', error);
       throw error;
     }
-  };
+  }
+
+  private handleWebImageCapture(): Promise<string> {
+    return new Promise((resolve, reject) => {
+      // Crear un input de tipo file
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.capture = 'environment';
+
+      input.onchange = (event: any) => {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (e: any) => {
+            resolve(e.target.result);
+          };
+          reader.onerror = (error) => {
+            reject(error);
+          };
+          reader.readAsDataURL(file);
+        } else {
+          reject(new Error('No se seleccionó ninguna imagen'));
+        }
+      };
+
+      // Simular click en el input
+      input.click();
+    });
+  }
 }

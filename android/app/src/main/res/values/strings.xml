@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">mi-app-camara</string>
+    <string name="title_activity_main">mi-app-camara</string>
+    <string name="package_name">com.example.miappcamara</string>
+    <string name="custom_url_scheme">com.example.miappcamara</string>
+</resources>
